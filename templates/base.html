@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="PhishGuard AI — AI-Powered Phishing Email Detection System using Ollama and Llama 3.2. Detect phishing emails with advanced machine learning.">
+  <title>{% block title %}PhishGuard AI{% endblock %} | Phishing Detection System</title>
+
+  <!-- Favicon (emoji as SVG inline) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ============================================================
+       SIDEBAR NAVIGATION
+       ============================================================ -->
+  <aside class="sidebar" role="navigation" aria-label="Main Navigation">
+
+    <!-- Brand -->
+    <div class="sidebar-brand">
+      <div class="brand-icon">🛡️</div>
+      <div class="brand-text">
+        <div class="brand-name">PhishGuard AI</div>
+        <div class="brand-tagline">Email Threat Detection</div>
+      </div>
+    </div>
+
+    <!-- Navigation Links -->
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+
+      <a href="{{ url_for('main.dashboard') }}"
+         class="nav-item {% if active_page == 'dashboard' %}active{% endif %}"
+         id="nav-dashboard">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Dashboard</span>
+      </a>
+
+      <a href="{{ url_for('main.analyze') }}"
+         class="nav-item {% if active_page == 'analyze' %}active{% endif %}"
+         id="nav-analyze">
+        <span class="nav-icon">🔍</span>
+        <span class="nav-label">Analyze Email</span>
+      </a>
+
+      <a href="{{ url_for('main.history') }}"
+         class="nav-item {% if active_page == 'history' %}active{% endif %}"
+         id="nav-history">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Scan History</span>
+      </a>
+
+      <div class="nav-section-label">Info</div>
+
+      <a href="{{ url_for('main.about') }}"
+         class="nav-item {% if active_page == 'about' %}active{% endif %}"
+         id="nav-about">
+        <span class="nav-icon">ℹ️</span>
+        <span class="nav-label">About Project</span>
+      </a>
+
+      <a href="{{ url_for('main.settings') }}"
+         class="nav-item {% if active_page == 'settings' %}active{% endif %}"
+         id="nav-settings">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Settings</span>
+      </a>
+    </nav>
+
+    <!-- Ollama Status Indicator -->
+    <div class="sidebar-status">
+      <div class="status-badge">
+        <span class="status-dot {% if ollama_status and ollama_status.running %}online{% else %}offline{% endif %} pulse"
+              id="sidebar-status-dot"></span>
+        <span class="status-text" id="sidebar-status-text">
+          {% if ollama_status and ollama_status.running %}
+            AI Online
+          {% else %}
+            AI Offline
+          {% endif %}
+        </span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============================================================
+       MAIN CONTENT AREA
+       ============================================================ -->
+  <main class="main-content">
+
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+        <div class="page-description">{% block page_desc %}Overview of email scan statistics{% endblock %}</div>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-time" id="live-clock"></span>
+        <a href="{{ url_for('main.analyze') }}" class="btn btn-primary btn-sm">
+          <span>🔍</span> Analyze Email
+        </a>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <div class="page-content fade-in-up">
+      {% block content %}{% endblock %}
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast Notification Container -->
+<div id="toast-container" aria-live="polite"></div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loading-overlay" role="status" aria-label="Analyzing email">
+  <div class="loading-card">
+    <div class="loading-spinner"></div>
+    <div class="loading-title">Analyzing Email...</div>
+    <div class="loading-steps" id="loading-step-text">Initializing detection engine</div>
+  </div>
+</div>
+
+<!-- Main JS -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

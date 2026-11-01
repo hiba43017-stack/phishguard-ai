@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+{% block title %}Scan Results — {{ scan.subject[:40] }}{% endblock %}
+{% block page_title %}Analysis Results{% endblock %}
+{% block page_desc %}Detailed phishing analysis report for the scanned email{% endblock %}
+
+{% block content %}
+
+{# Determine colors based on risk level #}
+{% set level_lower = scan.risk_level | lower %}
+{% set verdict_lower = scan.verdict | lower %}
+{% set gauge_color = {
+  'low': '#10b981',
+  'medium': '#f59e0b',
+  'high': '#f97316',
+  'critical': '#ef4444'
+}.get(level_lower, '#6d28d9') %}
+
+<!-- Back Button + Actions -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <a href="{{ url_for('main.analyze') }}" class="btn btn-secondary btn-sm">← New Analysis</a>
+    <a href="{{ url_for('main.history') }}" class="btn btn-secondary btn-sm">📋 History</a>
+  </div>
+  <div class="download-group">
+    <button class="btn btn-secondary btn-sm" id="btn-download-txt" onclick="downloadReport('txt')">
+      📄 Download TXT
+    </button>
+    <button class="btn btn-secondary btn-sm" id="btn-download-json" onclick="downloadReport('json')">
+      📦 Download JSON
+    </button>
+  </div>
+</div>
+
+<!-- Advisory Banner -->
+<div class="alert alert-warning mb-4">
+  <span class="alert-icon">⚠️</span>
+  <strong>Advisory Notice:</strong> This analysis is automated and advisory only.
+  PhishGuard AI assists in identifying risks but cannot guarantee 100% accuracy.
+  Always use your own judgement and consult your IT department for critical decisions.
+</div>
+
+<!-- ============================================================
+     MAIN RESULTS GRID
+     ============================================================ -->
+<div class="results-grid">
+
+  <!-- LEFT: Score Gauge + Summary -->
+  <div class="results-sidebar-panel">
+
+    <!-- Circular Risk Score Gauge -->
+    <div class="card">
+      <div class="risk-gauge-container">
+        <div class="risk-gauge" role="img" aria-label="Risk score: {{ scan.risk_score }} out of 100">
+          <svg class="gauge-svg" viewBox="0 0 120 120">
+            <circle class="gauge-bg" cx="60" cy="60" r="50"/>
+            <circle
+              class="gauge-fill"
+              cx="60" cy="60" r="50"
+              stroke="{{ gauge_color }}"
+              stroke-dasharray="314"
+              stroke-dashoffset="{{ 314 - (314 * scan.risk_score / 100) }}"
+              id="gauge-circle"
+            />
+          </svg>
+          <div class="gauge-center">
+            <div class="gauge-score" style="color:{{ gauge_color }};">{{ scan.risk_score }}</div>
+            <div class="gauge-label">Risk Score</div>
+          </div>
+        </div>
+
+        <!-- Verdict Badge -->
+        <div class="verdict-badge verdict-{{ verdict_lower }}">
+          {% if verdict_lower == 'safe' %}✅
+          {% elif verdict_lower == 'suspicious' %}⚠️
+          {% else %}🚨{% endif %}
+          {{ scan.verdict }}
+        </div>
+
+        <!-- Risk Level Badge -->
+        <div style="margin-top:10px;">
+          <span class="badge badge-{{ level_lower }}" style="font-size:0.82rem;padding:5px 14px;">
+            {{ scan.risk_level }} RISK
+          </span>
+        </div>
+
+        <!-- AI Confidence -->
+        {% if scan.ai_confidence is not none %}
+        <div style="margin-top:12px;text-align:center;">
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">
+            🤖 AI Confidence
+          </div>
+          <div style="font-size:1.3rem;font-weight:800;color:var(--primary-600);">
+            {{ scan.ai_confidence }}%
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Scan Meta -->
+        <div style="margin-top:14px;font-size:0.75rem;color:var(--text-muted);text-align:center;line-height:1.8;">
+          <div>Scan #{{ scan.id }}</div>
+          <div>{{ scan.scanned_at }}</div>
+          {% if scan.ollama_used %}
+          <div style="color:var(--safe-color);font-weight:600;">🤖 AI Analysis Used</div>
+          {% else %}
+          <div style="color:var(--medium-color);font-weight:600;">⚙️ Rule-Based Only</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Score Breakdown -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span>📊</span> Score Breakdown</div>
+      </div>
+      <div class="card-body">
+        <div class="score-breakdown">
+          <div class="score-bar-row">
+            <div class="score-bar-label">Rule Engine</div>
+            <div class="score-bar-track">
+              <div class="score-bar-fill"
+                   style="width:{{ ((scan.rule_score or 0) / 60 * 100) | round(1) }}%;
+                          background: var(--primary-500);"
+                   id="rule-bar"></div>
+            </div>
+            <div class="score-bar-value" style="color:var(--primary-600);">
+              {{ scan.rule_score or 0 }}/60
+            </div>
+          </div>
+          <div class="score-bar-row">
+            <div class="score-bar-label">AI Analysis</div>
+            <div class="score-bar-track">
+              <div class="score-bar-fill"
+                   style="width:{{ ((scan.ai_score or 0) / 40 * 100) | round(1) }}%;
+                          background: var(--blue-500);"
+                   id="ai-bar"></div>
+            </div>
+            <div class="score-bar-value" style="color:var(--blue-600);">
+              {{ scan.ai_score or 0 }}/40
+            </div>
+          </div>
+          <div class="score-bar-row">
+            <div class="score-bar-label" style="font-weight:700;">Final Score</div>
+            <div class="score-bar-track">
+              <div class="score-bar-fill"
+                   style="width:{{ scan.risk_score }}%;background:{{ gauge_color }};"
+                   id="final-bar"></div>
+            </div>
+            <div class="score-bar-value" style="color:{{ gauge_color }};font-weight:800;">
+              {{ scan.risk_score }}/100
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Detailed Analysis -->
+  <div class="results-main-panel">
+
+    <!-- Email Summary -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span>📧</span> Email Details</div>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:90px 1fr;gap:8px;font-size:0.875rem;align-items:start;">
+          <span style="color:var(--text-muted);font-weight:600;">From:</span>
+          <span style="font-family:var(--font-mono);color:var(--text-primary);word-break:break-all;">
+            {{ scan.sender }}
+          </span>
+          <span style="color:var(--text-muted);font-weight:600;">Subject:</span>
+          <span style="font-weight:600;color:var(--text-primary);">{{ scan.subject }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Explanation -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span>🧠</span> Analysis Explanation</div>
+      </div>
+      <div class="card-body">
+        <p style="font-size:0.875rem;color:var(--text-secondary);line-height:1.7;">
+          {{ scan.ai_explanation }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Detected Indicators -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <span>🚩</span> Detected Indicators
+          <span style="background:var(--critical-bg);color:var(--critical-color);border-radius:12px;
+                       font-size:0.72rem;padding:2px 8px;font-weight:700;margin-left:6px;">
+            {{ scan.indicators | length }}
+          </span>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if scan.indicators %}
+        <div class="indicators-list">
+          {% for ind in scan.indicators %}
+          <div class="indicator-item">
+            <div class="indicator-icon">🔍</div>
+            <div class="indicator-body">
+              <div class="indicator-name">{{ ind.name | replace('_', ' ') }}</div>
+              <div class="indicator-desc">{{ ind.description }}</div>
+              {% if ind.evidence %}
+              <div class="indicator-evidence">{{ ind.evidence }}</div>
+              {% endif %}
+            </div>
+            <div class="indicator-points">+{{ ind.points }}pts</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:0.875rem;">
+          ✅ No suspicious indicators detected by the rule engine.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- AI Reasons (if available) -->
+    {% if scan.reasons %}
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span>🤖</span> AI Analysis Findings</div>
+        <span class="tag">{{ scan.ai_verdict }}</span>
+      </div>
+      <div class="card-body">
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;">
+          {% for reason in scan.reasons %}
+          <li style="display:flex;align-items:flex-start;gap:10px;font-size:0.875rem;
+                     padding:10px;background:var(--bg-primary);border-radius:8px;
+                     border-left:3px solid var(--primary-400);">
+            <span>🔎</span>
+            <span style="color:var(--text-primary);">{{ reason }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% if scan.ai_uncertainty %}
+        <div style="margin-top:12px;font-size:0.8rem;color:var(--text-muted);
+                    padding:8px;background:var(--medium-bg);border-radius:6px;">
+          <strong>Uncertainty:</strong> {{ scan.ai_uncertainty }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Evidence Snippets -->
+    {% if scan.evidence %}
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span>🔬</span> Evidence Snippets</div>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          {% for item in scan.evidence %}
+          <div style="padding:8px 12px;background:var(--critical-bg);border-left:3px solid var(--critical-color);
+                      border-radius:0 6px 6px 0;font-size:0.8rem;font-family:var(--font-mono);
+                      color:var(--critical-color);word-break:break-all;">
+            {{ item }}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Recommended Actions -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span>🛡️</span> Recommended Actions</div>
+      </div>
+      <div class="card-body">
+        {% if scan.recommended_actions %}
+        <ol style="list-style:none;display:flex;flex-direction:column;gap:8px;counter-reset:actions;">
+          {% for action in scan.recommended_actions %}
+          <li style="display:flex;align-items:flex-start;gap:12px;font-size:0.875rem;
+                     padding:12px;background:var(--bg-primary);border-radius:8px;
+                     border:1px solid var(--border-color);">
+            <span style="background:var(--primary-100);color:var(--primary-700);border-radius:50%;
+                         width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+                         font-size:0.75rem;font-weight:700;flex-shrink:0;margin-top:1px;">
+              {{ loop.index }}
+            </span>
+            <span style="color:var(--text-primary);">{{ action }}</span>
+          </li>
+          {% endfor %}
+        </ol>
+        {% else %}
+        <p style="color:var(--text-muted);font-size:0.875rem;">No specific actions required.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Hidden data for download -->
+<script>
+const SCAN_DATA = {{ scan | tojson | safe }};
+
+function downloadReport(format) {
+  const scan = SCAN_DATA;
+  if (format === 'txt') {
+    const lines = [
+      '=' .repeat(60),
+      'PHISHGUARD AI — PHISHING DETECTION REPORT',
+      '='.repeat(60),
+      `Scan ID:      ${scan.id}`,
+      `Scanned At:   ${scan.scanned_at}`,
+      `Sender:       ${scan.sender}`,
+      `Subject:      ${scan.subject}`,
+      '',
+      `Risk Score:   ${scan.risk_score}/100`,
+      `Risk Level:   ${scan.risk_level}`,
+      `Verdict:      ${scan.verdict}`,
+      `AI Confidence: ${scan.ai_confidence !== null ? scan.ai_confidence + '%' : 'N/A'}`,
+      `AI Used:      ${scan.ollama_used ? 'Yes' : 'No'}`,
+      '',
+      '-'.repeat(60),
+      'ANALYSIS EXPLANATION',
+      '-'.repeat(60),
+      scan.ai_explanation,
+      '',
+      '-'.repeat(60),
+      `DETECTED INDICATORS (${scan.indicators.length})`,
+      '-'.repeat(60),
+      ...(scan.indicators.map((ind, i) =>
+        `${i+1}. [${ind.name}] (+${ind.points}pts)\n   ${ind.description}\n   Evidence: ${ind.evidence || 'N/A'}`
+      )),
+      '',
+      '-'.repeat(60),
+      'RECOMMENDED ACTIONS',
+      '-'.repeat(60),
+      ...(scan.recommended_actions.map((a, i) => `${i+1}. ${a}`)),
+      '',
+      '='.repeat(60),
+      'DISCLAIMER: This report is advisory only. PhishGuard AI assists',
+      'in identifying risks but cannot guarantee 100% accuracy.',
+      '='.repeat(60),
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    _triggerDownload(blob, `phishguard_report_${scan.id}.txt`);
+  } else {
+    const reportJson = {
+      report_generated_by: 'PhishGuard AI',
+      disclaimer: 'This report is advisory only. Results are not guaranteed.',
+      scan_id: scan.id,
+      scanned_at: scan.scanned_at,
+      email: { sender: scan.sender, subject: scan.subject },
+      result: {
+        risk_score: scan.risk_score,
+        risk_level: scan.risk_level,
+        verdict: scan.verdict,
+        ai_confidence: scan.ai_confidence,
+        ollama_used: scan.ollama_used,
+        ai_verdict: scan.ai_verdict,
+      },
+      explanation: scan.ai_explanation,
+      indicators: scan.indicators,
+      evidence: scan.evidence,
+      ai_reasons: scan.reasons,
+      recommended_actions: scan.recommended_actions,
+    };
+    const blob = new Blob([JSON.stringify(reportJson, null, 2)], { type: 'application/json' });
+    _triggerDownload(blob, `phishguard_report_${scan.id}.json`);
+  }
+}
+
+function _triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}

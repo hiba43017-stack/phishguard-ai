@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block page_desc %}Configure Ollama connection, model selection, and application settings{% endblock %}
+
+{% block content %}
+<div style="max-width:760px;">
+
+  <!-- ============================================================
+       OLLAMA CONNECTION
+       ============================================================ -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-header">
+      <div class="card-title"><span>🤖</span> Ollama AI Connection</div>
+      <button class="btn btn-secondary btn-sm" id="btn-test-connection">🔄 Test Connection</button>
+    </div>
+    <div class="card-body">
+
+      <!-- Status Display -->
+      <div class="ollama-status-card {% if ollama_status.running %}ollama-online{% else %}ollama-offline{% endif %}"
+           id="ollama-status-card">
+        <div class="ollama-status-icon" id="ollama-status-icon">
+          {{ '🟢' if ollama_status.running else '🔴' }}
+        </div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:0.9rem;color:var(--text-primary);" id="ollama-status-title">
+            Ollama — {{ "Connected" if ollama_status.running else "Disconnected" }}
+          </div>
+          <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;" id="ollama-status-msg">
+            {{ ollama_status.message }}
+          </div>
+        </div>
+        <span class="status-dot {{ 'online' if ollama_status.running else 'offline' }} pulse"
+              id="settings-status-dot"></span>
+      </div>
+
+      <!-- Not running instructions -->
+      {% if not ollama_status.running %}
+      <div class="alert alert-warning mt-3">
+        <span class="alert-icon">💡</span>
+        <div>
+          <strong>How to start Ollama:</strong>
+          <ol style="margin:8px 0 0 20px;font-size:0.82rem;line-height:2;">
+            <li>Install Ollama from <strong>ollama.com</strong></li>
+            <li>Open your terminal and run: <code style="font-family:var(--font-mono);">ollama serve</code></li>
+            <li>Pull the model: <code style="font-family:var(--font-mono);">ollama pull llama3.2:3b</code></li>
+            <li>Come back here and click "Test Connection"</li>
+          </ol>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Available Models -->
+      {% if ollama_status.running and ollama_status.models %}
+      <div style="margin-top:16px;">
+        <div style="font-size:0.82rem;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">
+          Available Models on this Ollama Instance:
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;" id="models-list">
+          {% for model in ollama_status.models %}
+          <span class="tag" style="font-size:0.78rem;">{{ model }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+       CONFIGURATION
+       ============================================================ -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-header">
+      <div class="card-title"><span>⚙️</span> Current Configuration</div>
+    </div>
+    <div class="card-body">
+      <div class="settings-section">
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Ollama Base URL</div>
+            <div class="settings-row-desc">The local address where Ollama is running</div>
+          </div>
+          <div class="settings-row-value">{{ ollama_cfg.base_url }}</div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">AI Model</div>
+            <div class="settings-row-desc">Language model used for email analysis</div>
+          </div>
+          <div class="settings-row-value">{{ ollama_cfg.model }}</div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Request Timeout</div>
+            <div class="settings-row-desc">Maximum seconds to wait for AI response</div>
+          </div>
+          <div class="settings-row-value">{{ ollama_cfg.timeout }}s</div>
+        </div>
+      </div>
+
+      <div class="alert alert-info">
+        <span class="alert-icon">ℹ️</span>
+        To change these settings, edit the <code style="font-family:var(--font-mono);">.env</code> file
+        in the project root and restart the server.
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       DATABASE STATISTICS
+       ============================================================ -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-header">
+      <div class="card-title"><span>🗄️</span> Database Statistics</div>
+    </div>
+    <div class="card-body">
+      <div class="settings-section">
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Total Scans Stored</div>
+            <div class="settings-row-desc">Number of email analyses saved to SQLite</div>
+          </div>
+          <div class="settings-row-value">{{ stats.total }}</div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Safe Emails</div>
+          </div>
+          <div class="settings-row-value" style="color:var(--safe-color);">{{ stats.safe }}</div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Suspicious Emails</div>
+          </div>
+          <div class="settings-row-value" style="color:var(--medium-color);">{{ stats.suspicious }}</div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Malicious Emails</div>
+          </div>
+          <div class="settings-row-value" style="color:var(--critical-color);">{{ stats.malicious }}</div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Average Risk Score</div>
+          </div>
+          <div class="settings-row-value">{{ stats.avg_score }}/100</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       APPLICATION INFO
+       ============================================================ -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span>📋</span> Application Information</div>
+    </div>
+    <div class="card-body">
+      <div class="settings-section">
+        {% for info in [
+          ('Application', 'PhishGuard AI'),
+          ('Version', '1.0.0'),
+          ('Framework', 'Flask 3.0.3'),
+          ('Python', '3.11+'),
+          ('Database', 'SQLite (instance/phishing.db)'),
+          ('Purpose', 'BCA Final Year Project — Phishing Email Detection'),
+          ('License', 'MIT (Educational Use)'),
+        ] %}
+        <div class="settings-row">
+          <div class="settings-row-label">{{ info[0] }}</div>
+          <div class="settings-row-value">{{ info[1] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Test Ollama Connection
+document.getElementById('btn-test-connection').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-test-connection');
+  btn.disabled = true;
+  btn.textContent = '🔄 Testing...';
+
+  try {
+    const res = await fetch('/api/ollama-status');
+    const data = await res.json();
+
+    const card    = document.getElementById('ollama-status-card');
+    const icon    = document.getElementById('ollama-status-icon');
+    const title   = document.getElementById('ollama-status-title');
+    const msg     = document.getElementById('ollama-status-msg');
+    const dot     = document.getElementById('settings-status-dot');
+
+    if (data.running) {
+      card.className = 'ollama-status-card ollama-online';
+      icon.textContent = '🟢';
+      title.textContent = 'Ollama — Connected';
+      dot.className = 'status-dot online pulse';
+      showToast('Ollama is connected and running! ✅', 'success');
+    } else {
+      card.className = 'ollama-status-card ollama-offline';
+      icon.textContent = '🔴';
+      title.textContent = 'Ollama — Disconnected';
+      dot.className = 'status-dot offline pulse';
+      showToast('Ollama is not running. Start it with: ollama serve', 'error');
+    }
+    msg.textContent = data.message;
+
+  } catch (err) {
+    showToast('Connection test failed.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔄 Test Connection';
+  }
+});
+</script>
+{% endblock %}

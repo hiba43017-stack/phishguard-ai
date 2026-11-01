@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}About Project{% endblock %}
+{% block page_title %}About Project{% endblock %}
+{% block page_desc %}Learn about PhishGuard AI and its technical implementation{% endblock %}
+
+{% block content %}
+<div style="max-width:860px;">
+
+  <!-- Hero Card -->
+  <div class="card mb-4" style="background:linear-gradient(135deg,#1e1b4b,#312e81);color:white;margin-bottom:24px;">
+    <div style="padding:36px;">
+      <div style="font-size:3rem;margin-bottom:12px;">🛡️</div>
+      <h2 style="font-size:1.8rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:8px;">
+        PhishGuard AI
+      </h2>
+      <p style="font-size:1rem;color:rgba(255,255,255,0.75);max-width:600px;line-height:1.7;">
+        An AI-powered phishing email detection system combining rule-based heuristics
+        with local Large Language Models via Ollama. Built as a BCA final year project
+        demonstrating real-world cybersecurity concepts.
+      </p>
+      <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
+        <span style="background:rgba(255,255,255,0.15);padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+          Python 3.11+
+        </span>
+        <span style="background:rgba(255,255,255,0.15);padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+          Flask
+        </span>
+        <span style="background:rgba(255,255,255,0.15);padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+          Ollama + Llama 3.2
+        </span>
+        <span style="background:rgba(255,255,255,0.15);padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+          SQLite
+        </span>
+        <span style="background:rgba(255,255,255,0.15);padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+          Pytest
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- How It Works -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-header">
+      <div class="card-title"><span>⚙️</span> How It Works</div>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        {% for step in [
+          ('1', '📝', 'Input Collection', 'The user submits the email sender, subject, and body through the web form. All input is validated and sanitized before processing.'),
+          ('2', '🔍', 'Rule-Based Detection', 'The Rule Engine applies 11+ detection checks including URL analysis, urgency language, credential requests, brand impersonation, and sender anomalies. Each check contributes points (max 60).'),
+          ('3', '🤖', 'AI Analysis via Ollama', 'The email is sent to a locally running Llama 3.2 model via the Ollama API. The AI returns a structured JSON verdict with reasons, evidence, and confidence. This contributes up to 40 points.'),
+          ('4', '📊', 'Risk Score Calculation', 'Rule score (0-60) + AI score (0-40) = Final score (0-100). The score maps to LOW / MEDIUM / HIGH / CRITICAL risk categories.'),
+          ('5', '💾', 'Storage & Reporting', 'Results are saved to SQLite. The user sees a detailed report with indicators, evidence, AI reasoning, and recommended actions. Reports can be downloaded as TXT or JSON.'),
+        ] %}
+        <div style="display:flex;gap:16px;align-items:flex-start;">
+          <div style="background:var(--primary-100);color:var(--primary-700);border-radius:50%;
+                      width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+                      font-weight:800;font-size:0.9rem;flex-shrink:0;margin-top:2px;">
+            {{ step[0] }}
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:0.9rem;margin-bottom:4px;">
+              {{ step[2] }} {{ step[1] }}
+            </div>
+            <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;">
+              {{ step[3] }}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Risk Score Explained -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-header">
+      <div class="card-title"><span>📊</span> Risk Score System</div>
+    </div>
+    <div class="card-body">
+      <table style="width:100%;font-size:0.875rem;">
+        <thead>
+          <tr>
+            <th>Score Range</th>
+            <th>Level</th>
+            <th>Verdict</th>
+            <th>Recommended Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>0 – 24</strong></td>
+            <td><span class="badge badge-low">LOW</span></td>
+            <td>Safe</td>
+            <td>No action needed. Remain cautious.</td>
+          </tr>
+          <tr>
+            <td><strong>25 – 49</strong></td>
+            <td><span class="badge badge-medium">MEDIUM</span></td>
+            <td>Suspicious</td>
+            <td>Verify sender independently before responding.</td>
+          </tr>
+          <tr>
+            <td><strong>50 – 74</strong></td>
+            <td><span class="badge badge-high">HIGH</span></td>
+            <td>Suspicious</td>
+            <td>Do not click links. Report to IT.</td>
+          </tr>
+          <tr>
+            <td><strong>75 – 100</strong></td>
+            <td><span class="badge badge-critical">CRITICAL</span></td>
+            <td>Malicious</td>
+            <td>Delete immediately. Report as phishing. Change passwords if interacted.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Security & Privacy -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-header">
+      <div class="card-title"><span>🔒</span> Security & Privacy</div>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:0.85rem;">
+        {% for item in [
+          '✅ All processing is local — no data sent to external servers',
+          '✅ AI analysis uses your local Ollama instance',
+          '✅ Input validation prevents injection attacks',
+          '✅ Parameterized SQL queries prevent SQL injection',
+          '✅ Output is escaped to prevent XSS',
+          '✅ No automatic URL opening or email sending',
+          '✅ No unnecessary personal data storage',
+          '✅ Logs are redacted to avoid sensitive data exposure',
+        ] %}
+        <div style="padding:8px 12px;background:var(--safe-bg);border-radius:6px;
+                    border-left:3px solid var(--safe-color);color:var(--text-primary);">
+          {{ item }}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Limitations -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-header">
+      <div class="card-title"><span>⚠️</span> Project Limitations</div>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-warning" style="margin-bottom:0;">
+        <span class="alert-icon">⚠️</span>
+        <ul style="margin:0;padding-left:20px;font-size:0.875rem;line-height:2;">
+          <li>This system is for educational purposes only.</li>
+          <li>AI analysis requires Ollama and llama3.2:3b to be installed locally.</li>
+          <li>The rule engine uses pattern matching — sophisticated attacks may evade detection.</li>
+          <li>False positives (legitimate emails flagged) and false negatives (phishing missed) are possible.</li>
+          <li>Results should always be verified by a human security professional for critical decisions.</li>
+          <li>Only plain-text and simple HTML email bodies are supported (no attachment scanning).</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Technology Stack -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span>🔧</span> Technology Stack</div>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+        {% for tech in [
+          ('🐍', 'Python 3.11+', 'Core Language'),
+          ('🌶️', 'Flask 3.0', 'Web Framework'),
+          ('🤖', 'Ollama', 'Local AI Runtime'),
+          ('🦙', 'Llama 3.2 3B', 'AI Language Model'),
+          ('🗄️', 'SQLite', 'Database'),
+          ('🧪', 'Pytest', 'Testing Framework'),
+          ('🌐', 'HTML/CSS/JS', 'Frontend'),
+          ('📊', 'Chart.js', 'Data Visualization'),
+        ] %}
+        <div style="padding:14px;border:1px solid var(--border-color);border-radius:10px;
+                    text-align:center;transition:transform 0.2s,box-shadow 0.2s;"
+             onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 20px rgba(0,0,0,0.1)'"
+             onmouseout="this.style.transform='';this.style.boxShadow=''">
+          <div style="font-size:1.8rem;margin-bottom:6px;">{{ tech[0] }}</div>
+          <div style="font-weight:700;font-size:0.875rem;color:var(--text-primary);">{{ tech[1] }}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">{{ tech[2] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_desc %}Real-time overview of phishing email scan statistics{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================
+     STAT CARDS ROW
+     ============================================================ -->
+<div class="stats-grid stagger-children">
+
+  <!-- Total Scanned -->
+  <div class="stat-card card-total">
+    <div class="stat-icon">📧</div>
+    <div class="stat-number" id="stat-total">{{ stats.total }}</div>
+    <div class="stat-label">Total Scanned</div>
+  </div>
+
+  <!-- Safe -->
+  <div class="stat-card card-safe">
+    <div class="stat-icon">✅</div>
+    <div class="stat-number" id="stat-safe">{{ stats.safe }}</div>
+    <div class="stat-label">Safe Emails</div>
+  </div>
+
+  <!-- Suspicious -->
+  <div class="stat-card card-suspicious">
+    <div class="stat-icon">⚠️</div>
+    <div class="stat-number" id="stat-suspicious">{{ stats.suspicious }}</div>
+    <div class="stat-label">Suspicious</div>
+  </div>
+
+  <!-- Malicious -->
+  <div class="stat-card card-malicious">
+    <div class="stat-icon">🚨</div>
+    <div class="stat-number" id="stat-malicious">{{ stats.malicious }}</div>
+    <div class="stat-label">Malicious</div>
+  </div>
+
+  <!-- Average Risk Score -->
+  <div class="stat-card card-avg">
+    <div class="stat-icon">📈</div>
+    <div class="stat-number" id="stat-avg">{{ stats.avg_score }}<span style="font-size:1rem;font-weight:500">/100</span></div>
+    <div class="stat-label">Avg Risk Score</div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     CHARTS + OLLAMA STATUS ROW
+     ============================================================ -->
+<div class="charts-grid">
+
+  <!-- Risk Distribution Donut -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span>🎯</span> Risk Distribution</div>
+    </div>
+    <div class="card-body">
+      <div class="chart-container">
+        <canvas id="riskChart"></canvas>
+      </div>
+      <!-- Legend -->
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:12px;font-size:0.8rem;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:12px;height:12px;border-radius:3px;background:#10b981;display:inline-block;"></span>
+          <span>LOW: {{ stats.level_counts.LOW }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:12px;height:12px;border-radius:3px;background:#f59e0b;display:inline-block;"></span>
+          <span>MEDIUM: {{ stats.level_counts.MEDIUM }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:12px;height:12px;border-radius:3px;background:#f97316;display:inline-block;"></span>
+          <span>HIGH: {{ stats.level_counts.HIGH }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:12px;height:12px;border-radius:3px;background:#ef4444;display:inline-block;"></span>
+          <span>CRITICAL: {{ stats.level_counts.CRITICAL }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column: Ollama status + Recent activity -->
+  <div style="display:flex;flex-direction:column;gap:16px;">
+
+    <!-- AI Connection Status -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span>🤖</span> AI Engine Status</div>
+      </div>
+      <div class="card-body">
+        <div class="ollama-status-card {% if ollama_status.running %}ollama-online{% else %}ollama-offline{% endif %}">
+          <div class="ollama-status-icon">
+            {% if ollama_status.running %}🟢{% else %}🔴{% endif %}
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:0.9rem;color:var(--text-primary);">
+              Ollama — {{ "Connected" if ollama_status.running else "Disconnected" }}
+            </div>
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">
+              {{ ollama_status.message }}
+            </div>
+          </div>
+          <div>
+            <span class="tag">{{ ollama_model }}</span>
+          </div>
+        </div>
+        {% if not ollama_status.running %}
+        <div class="alert alert-warning mt-3">
+          <span class="alert-icon">⚠️</span>
+          <div>
+            <strong>Ollama is not running.</strong> Rule-based analysis will still work,
+            but AI-powered analysis will be unavailable.
+            <br><code style="font-size:0.78rem;font-family:var(--font-mono);">ollama serve</code> to start it.
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span>⚡</span> Quick Actions</div>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a href="{{ url_for('main.analyze') }}" class="btn btn-primary">
+            🔍 Analyze New Email
+          </a>
+          <a href="{{ url_for('main.history') }}" class="btn btn-secondary">
+            📋 View History
+          </a>
+          <a href="{{ url_for('main.settings') }}" class="btn btn-secondary">
+            ⚙️ Settings
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     RECENT SCANS TABLE
+     ============================================================ -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><span>🕐</span> Recent Scans</div>
+    <a href="{{ url_for('main.history') }}" class="btn btn-secondary btn-sm">View All →</a>
+  </div>
+  <div class="card-body">
+    {% if stats.recent %}
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Sender</th>
+            <th>Subject</th>
+            <th>Risk Score</th>
+            <th>Risk Level</th>
+            <th>Verdict</th>
+            <th>Scanned At</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for scan in stats.recent %}
+          <tr>
+            <td style="color:var(--text-muted);font-size:0.8rem;">{{ scan.id }}</td>
+            <td><div class="sender-text" title="{{ scan.sender }}">{{ scan.sender }}</div></td>
+            <td><div class="subject-text" title="{{ scan.subject }}">{{ scan.subject }}</div></td>
+            <td>
+              <span class="score-cell" style="color:
+                {% if scan.risk_score >= 75 %}var(--critical-color)
+                {% elif scan.risk_score >= 50 %}var(--high-color)
+                {% elif scan.risk_score >= 25 %}var(--medium-color)
+                {% else %}var(--safe-color){% endif %}">
+                {{ scan.risk_score }}
+              </span>
+            </td>
+            <td>
+              <span class="badge badge-{{ scan.risk_level | lower }}">{{ scan.risk_level }}</span>
+            </td>
+            <td>
+              <span class="badge badge-{{ scan.verdict | lower }}">{{ scan.verdict }}</span>
+            </td>
+            <td style="font-size:0.78rem;color:var(--text-muted);">{{ scan.scanned_at }}</td>
+            <td>
+              <a href="{{ url_for('main.results', scan_id=scan.id) }}" class="btn btn-secondary btn-sm">View</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">📭</div>
+      <h3>No scans yet</h3>
+      <p>Analyze your first email to see results here.</p>
+      <a href="{{ url_for('main.analyze') }}" class="btn btn-primary">Analyze Now</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Risk Distribution Chart
+const ctx = document.getElementById('riskChart');
+if (ctx) {
+  const data = {
+    LOW:      {{ stats.level_counts.LOW }},
+    MEDIUM:   {{ stats.level_counts.MEDIUM }},
+    HIGH:     {{ stats.level_counts.HIGH }},
+    CRITICAL: {{ stats.level_counts.CRITICAL }},
+  };
+  const total = Object.values(data).reduce((a, b) => a + b, 0);
+
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
+      datasets: [{
+        data: [data.LOW, data.MEDIUM, data.HIGH, data.CRITICAL],
+        backgroundColor: ['#10b981', '#f59e0b', '#f97316', '#ef4444'],
+        borderColor: '#ffffff',
+        borderWidth: 3,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+              return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+</script>
+{% endblock %}

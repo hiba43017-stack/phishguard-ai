@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Scan History{% endblock %}
+{% block page_title %}Scan History{% endblock %}
+{% block page_desc %}Browse, search, and manage all previous email scan records{% endblock %}
+
+{% block content %}
+
+<!-- Header Row -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+  <div>
+    <span style="font-size:0.875rem;color:var(--text-muted);">
+      {{ scans | length }} record(s) found
+    </span>
+  </div>
+  <button class="btn btn-danger btn-sm" id="btn-clear-all"
+          {% if not scans %}disabled{% endif %}>
+    🗑️ Clear All History
+  </button>
+</div>
+
+<!-- Search + Filter Bar -->
+<form method="GET" action="{{ url_for('main.history') }}" id="search-form">
+  <div class="search-bar">
+    <div class="search-input-wrapper">
+      <span class="search-icon">🔍</span>
+      <input
+        type="text"
+        name="q"
+        class="search-input"
+        id="search-input"
+        placeholder="Search by sender or subject..."
+        value="{{ query }}"
+        autocomplete="off"
+      >
+    </div>
+    <div class="filter-chips">
+      <a href="{{ url_for('main.history', q=query) }}"
+         class="filter-chip {% if not risk_level %}active{% endif %}">All</a>
+      <a href="{{ url_for('main.history', q=query, level='LOW') }}"
+         class="filter-chip {% if risk_level == 'LOW' %}active{% endif %}">✅ Low</a>
+      <a href="{{ url_for('main.history', q=query, level='MEDIUM') }}"
+         class="filter-chip {% if risk_level == 'MEDIUM' %}active{% endif %}">⚠️ Medium</a>
+      <a href="{{ url_for('main.history', q=query, level='HIGH') }}"
+         class="filter-chip {% if risk_level == 'HIGH' %}active{% endif %}">🔶 High</a>
+      <a href="{{ url_for('main.history', q=query, level='CRITICAL') }}"
+         class="filter-chip {% if risk_level == 'CRITICAL' %}active{% endif %}">🚨 Critical</a>
+    </div>
+    <button type="submit" class="btn btn-secondary btn-sm">Search</button>
+    {% if query or risk_level %}
+    <a href="{{ url_for('main.history') }}" class="btn btn-secondary btn-sm">✕ Reset</a>
+    {% endif %}
+  </div>
+</form>
+
+<!-- History Table -->
+<div class="card">
+  <div class="card-body" style="padding:0;">
+    {% if scans %}
+    <div class="table-responsive">
+      <table id="history-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Sender</th>
+            <th>Subject</th>
+            <th>Score</th>
+            <th>Level</th>
+            <th>Verdict</th>
+            <th>AI Used</th>
+            <th>Scanned At</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for scan in scans %}
+          <tr id="row-{{ scan.id }}" data-scan-id="{{ scan.id }}">
+            <td style="color:var(--text-muted);font-size:0.78rem;">{{ scan.id }}</td>
+            <td>
+              <div class="sender-text" title="{{ scan.sender }}">{{ scan.sender }}</div>
+            </td>
+            <td>
+              <div class="subject-text" title="{{ scan.subject }}">{{ scan.subject }}</div>
+            </td>
+            <td>
+              <span class="score-cell font-bold" style="color:
+                {% if scan.risk_score >= 75 %}var(--critical-color)
+                {% elif scan.risk_score >= 50 %}var(--high-color)
+                {% elif scan.risk_score >= 25 %}var(--medium-color)
+                {% else %}var(--safe-color){% endif %};">
+                {{ scan.risk_score }}
+              </span>
+            </td>
+            <td><span class="badge badge-{{ scan.risk_level | lower }}">{{ scan.risk_level }}</span></td>
+            <td><span class="badge badge-{{ scan.verdict | lower }}">{{ scan.verdict }}</span></td>
+            <td style="text-align:center;">
+              {% if scan.ollama_used %}
+                <span title="AI analysis was used">🤖</span>
+              {% else %}
+                <span title="Rule-based only" style="opacity:0.4;">—</span>
+              {% endif %}
+            </td>
+            <td style="font-size:0.76rem;color:var(--text-muted);white-space:nowrap;">
+              {{ scan.scanned_at }}
+            </td>
+            <td>
+              <div style="display:flex;gap:6px;">
+                <a href="{{ url_for('main.results', scan_id=scan.id) }}"
+                   class="btn btn-secondary btn-sm" title="View Details">👁️</a>
+                <button class="btn btn-danger btn-sm btn-delete"
+                        data-id="{{ scan.id }}"
+                        title="Delete this scan">🗑️</button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">📭</div>
+      <h3>No scans found</h3>
+      {% if query or risk_level %}
+      <p>No scans match your search criteria. Try adjusting your filters.</p>
+      <a href="{{ url_for('main.history') }}" class="btn btn-secondary">Clear Filters</a>
+      {% else %}
+      <p>You haven't analyzed any emails yet. Start by analyzing an email!</p>
+      <a href="{{ url_for('main.analyze') }}" class="btn btn-primary">Analyze First Email</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/history.js') }}"></script>
+{% endblock %}

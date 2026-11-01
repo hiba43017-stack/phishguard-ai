@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Analyze Email{% endblock %}
+{% block page_title %}Analyze Email{% endblock %}
+{% block page_desc %}Submit an email for AI-powered phishing detection analysis{% endblock %}
+
+{% block content %}
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start;">
+
+  <!-- ============================================================
+       MAIN FORM CARD
+       ============================================================ -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span>🔍</span> Email Analysis Form</div>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-load-sample">📋 Load Sample</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-clear">🗑️ Clear</button>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <!-- Advisory Notice -->
+      <div class="alert alert-info mb-4">
+        <span class="alert-icon">ℹ️</span>
+        <div>
+          <strong>Privacy Notice:</strong> Email content is processed locally on your machine.
+          It is sent only to your locally running Ollama instance — never to external servers.
+          Results are <strong>advisory only</strong> and are not guaranteed to be 100% accurate.
+        </div>
+      </div>
+
+      <!-- Form -->
+      <form id="analyze-form" novalidate>
+
+        <!-- Sender -->
+        <div class="form-group">
+          <label class="form-label" for="sender">
+            Sender Email Address <span class="required">*</span>
+          </label>
+          <input
+            type="text"
+            id="sender"
+            name="sender"
+            class="form-control"
+            placeholder="e.g. security@paypa1-verify.com or John Doe <john@example.com>"
+            value="{{ sample.sender if sample else '' }}"
+            maxlength="254"
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <div class="form-error" id="sender-error"></div>
+          <div class="form-hint">Full email address or "Display Name &lt;email@domain.com&gt;" format.</div>
+        </div>
+
+        <!-- Subject -->
+        <div class="form-group">
+          <label class="form-label" for="subject">
+            Email Subject <span class="required">*</span>
+          </label>
+          <input
+            type="text"
+            id="subject"
+            name="subject"
+            class="form-control"
+            placeholder="e.g. URGENT: Your account has been suspended"
+            value="{{ sample.subject if sample else '' }}"
+            maxlength="998"
+            autocomplete="off"
+          >
+          <div class="form-error" id="subject-error"></div>
+        </div>
+
+        <!-- Body -->
+        <div class="form-group">
+          <label class="form-label" for="body">
+            Email Body <span class="required">*</span>
+          </label>
+          <textarea
+            id="body"
+            name="body"
+            class="form-control"
+            placeholder="Paste the full email body here..."
+            rows="12"
+            maxlength="50000"
+            spellcheck="false"
+          >{{ sample.body if sample else '' }}</textarea>
+          <div class="form-error" id="body-error"></div>
+          <div class="form-hint">
+            <span id="char-count">0</span>/50,000 characters.
+            Paste the complete email body for best results.
+          </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div style="display:flex;gap:12px;margin-top:8px;">
+          <button type="submit" class="btn btn-primary btn-lg" id="btn-analyze" style="flex:1;">
+            <span id="analyze-btn-icon">🚀</span>
+            <span id="analyze-btn-text">Analyze Email</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SIDEBAR INFO PANELS
+       ============================================================ -->
+  <div style="display:flex;flex-direction:column;gap:16px;">
+
+    <!-- Detection Checks -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span>🛡️</span> Detection Checks</div>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:0.82rem;">
+          {% for check in [
+            ('🔗', 'Suspicious URL patterns'),
+            ('⚡', 'Urgency / threat language'),
+            ('🔐', 'Password & OTP requests'),
+            ('💳', 'Payment lures'),
+            ('🎭', 'Brand impersonation'),
+            ('📧', 'Sender domain mismatch'),
+            ('🤖', 'AI-powered analysis'),
+            ('📊', 'Risk score calculation'),
+          ] %}
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border-color);">
+            <span>{{ check[0] }}</span>
+            <span style="color:var(--text-secondary);">{{ check[1] }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Risk Score Guide -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span>📊</span> Risk Score Guide</div>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:0.82rem;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="badge badge-low">LOW</span>
+            <span style="color:var(--text-secondary);">0–24 • Safe</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="badge badge-medium">MEDIUM</span>
+            <span style="color:var(--text-secondary);">25–49 • Suspicious</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="badge badge-high">HIGH</span>
+            <span style="color:var(--text-secondary);">50–74 • Suspicious</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="badge badge-critical">CRITICAL</span>
+            <span style="color:var(--text-secondary);">75–100 • Malicious</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div style="font-size:0.75rem;color:var(--text-muted);">
+          Score = Rule-based (0–60) + AI assessment (0–40)
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Display -->
+    <div id="error-panel" class="alert alert-danger hidden">
+      <span class="alert-icon">❌</span>
+      <div id="error-message"></div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/analyze.js') }}"></script>
+{% endblock %}
